@@ -1,0 +1,31 @@
+{
+    "exit_key":"exit",
+    "username":"ユーザー名",
+    "character_dir":"character_data",
+    "log_dir":"log",
+    "retry":{
+        "max_attempt_number":3,
+        "min_wait_seconds":5,
+        "max_wait_seconds":15
+    },
+    "talk":{
+        "response_min":10,
+        "response_max":40,
+        "completion":{
+            "model":"gpt-3.5-turbo",
+            "temperature":0.8,
+            "top_p":0.95,
+            "presence_penalty":1,
+            "frequency_penalty":1
+        }
+    },
+    "conversation":{
+        "max":12,
+        "summarize":8
+    },
+    "voicevox":{
+        "engine_path":"",
+        "volume":1,
+        "post":0.1
+    }
+}
