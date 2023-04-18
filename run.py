@@ -150,7 +150,6 @@ class MultiCharacterTalking(object):
     def user_input_thread(self):
         """ユーザー入力を受け取り、キューにアイテムを追加する。"""
         
-        # 入力があるまでブロック。入力がEXIT_KEYだった場合は抜ける。
         while True:
             self.logger('Waiting for user input...', cls=self, fn=self.user_input_thread)
             user_input = input()
@@ -171,25 +170,21 @@ class MultiCharacterTalking(object):
     
     def talk_thread(self, conv:Conversations):
         """
-            キューから自分以外の発言を取り出し、応答する。
-            得られた返答をボイスキューに追加する。
-            キャラごとに1つ立てる必要がある。
+            キューから発言を取り出し、発言者以外で誰が応答すべきかを判定、その後返答を作成する。
+            得られた返答は発言キューとボイス再生キューに追加する。
         """
 
         while not (self._exit_flag and self.q_message.empty()):
             """
-                他者の発言をキューから取り出す
                 アイテムが取り出せるまで、1秒おきにチェック。
-                _exit_flagがTrueかつ、AI用メッセージキューが空になると抜ける
+                _exit_flagがTrueかつ、AI用メッセージキューが空になると抜ける。
             """
 
-            msg_list = []
             current_queue_list = []
 
             try:
                 # AIの発言をキューから取得
                 ai_msg = self.q_message.get(timeout=1)
-                msg_list.append(ai_msg)
                 current_queue_list.append(self.q_message)
             except queue.Empty:
                 ai_msg = False
@@ -197,7 +192,6 @@ class MultiCharacterTalking(object):
             try:
                 # ユーザーの発言をキューから取得
                 user_msg = self.q_user_input.get(timeout=1)
-                msg_list.append(user_msg)
                 current_queue_list.append(self.q_user_input)
             except queue.Empty:
                 user_msg = False
@@ -219,10 +213,10 @@ class MultiCharacterTalking(object):
                 self.logger('Get item : {}:{}'.format(user_msg.name, user_msg.content), cls=self, fn=self.talk_thread)
                 conv.add_content(name=user_msg.name, content=user_msg.content)
                 
-            # ユーザーとAI発言両方来た場合、ユーザーの発言でCompletionする。
+            # ユーザーとAI発言両方来た場合、ユーザーの発言を最新としてCompletionする。
             msg = user_msg if user_msg else ai_msg
 
-            # 誰に対する発言なのか識別する
+            # 誰が応答すべきか、発言者以外の中から判別する
             new_template = dict(self.interlocutor_template)
             del new_template[msg.name]
 
@@ -241,12 +235,12 @@ class MultiCharacterTalking(object):
                     ch_name_list.remove(msg.name)
                 interlocutor_key = random.choice(ch_name_list)
 
-            # 次に誰が話すかを決める
+            # 次に誰が話すか決定
             self.logger('Next : {}'.format(interlocutor_key), cls=self, fn=self.talk_thread)
             if self.verbose:
                 self.console(" -> {}".format(interlocutor_key))
             if not interlocutor_key in self.ch_dict.keys():
-                # AIキャラクターじゃなかったらcontinue
+                # AIキャラクターじゃなかったらここでcontinue
                 for current_queue in current_queue_list:
                     current_queue.task_done()
                 continue
@@ -275,7 +269,6 @@ class MultiCharacterTalking(object):
             
             # AIの発言をAIメッセージキューに追加（次の人に渡すため）
             # ※exitになったときはキューに入れず（他者に渡さず）終える。キューを空にしないとループ抜けられないので。。。
-            #   convに足されず履歴が残らない問題あるけど、、最後だからいいか？？
             if not self._exit_flag:
                 self.logger('[{}] Put item to message queue: {}'.format(ch.id, ai_content), cls=self, fn=self.talk_thread)
                 self.q_message.put(Message(name=ch.name, content=ai_content))
@@ -298,7 +291,6 @@ class MultiCharacterTalking(object):
 
             conv.shrink_messages(CONV_SUMMARIZE)
             
-        # 終了前にエクスポート、要約、記憶への格納処理をここで
         conv.shrink_messages(-1) # 残りすべて要約して終了
         
         self.logger('Exit', cls=self, fn=self.manage_conv_thread)
@@ -306,9 +298,11 @@ class MultiCharacterTalking(object):
     def voice_play_thread(self, v:VoiceGenerator):
 
         while not (self._exit_flag and self.q_voice_play.empty()):
-            # 合成されたwavパスをキューから取り出す
-            # アイテムが取り出せるまで、1秒おきにチェック。
-            # _exit_flagがTrueかつ、キューが空になると抜ける
+            """
+            合成されたwavパスをキューから取り出す
+            アイテムが取り出せるまで、1秒おきにチェック。
+            _exit_flagがTrueかつ、キューが空になると抜ける
+            """
             try:
                 data = self.q_voice_play.get(timeout=1)
             except queue.Empty:
@@ -329,7 +323,7 @@ class MultiCharacterTalking(object):
         self.logger('Exit', cls=self, fn=self.voice_play_thread)
 
     def __voice_synthesis(self, ch:Character, text:str):
-        """AI発言を受け取り、wavをキューに追加する。"""
+        """受け取ったテキストで音声合成し、得られたwavをキューに追加する。"""
 
         wav_path = self.voice_generator.text2voice(text, 
                                 str(time.time()), 
@@ -343,7 +337,7 @@ class MultiCharacterTalking(object):
         
         self.q_voice_play.put([wav_path, text, ch])
 
-    
+
 if __name__ == "__main__":
 
     try:
