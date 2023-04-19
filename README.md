@@ -9,7 +9,7 @@ pip install -r requirements.txt
 ```
 
 ## 実行
-`-c`の後ろに登場させるキャラ名を複数連ねて開始します。  
+VOICEVOX ENGINEを裏で立ち上げておいて`run.py`を実行します。`-c`の後ろに登場させるキャラ名を複数連ねます。  
 実行後まず何らかのユーザー入力を行うと会話が始まりますが、AI同士が話し始めるかどうかは運次第です。  
 ```
 python run.py -c dereko interiko

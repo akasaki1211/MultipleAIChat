@@ -24,10 +24,6 @@ class VoiceGenerator(object):
         if VOICEVOX_ENGINE_PATH:
             if not self.__check_server('localhost', 50021):
                 subprocess.Popen(['start', '', VOICEVOX_ENGINE_PATH, '--use_gpu'], shell=True)
-
-    def __del__(self):
-        pass
-        #os.system("taskkill /f /im run.exe")
     
     def __log(self, msg:str, lv='info'):
         if not self.logger:
