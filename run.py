@@ -291,7 +291,7 @@ class MultiCharacterTalking(object):
 
             conv.shrink_messages(CONV_SUMMARIZE)
             
-        conv.shrink_messages(-1) # 残りすべて要約して終了
+        #conv.shrink_messages(-1) # 残りすべて要約して終了
         
         self.logger('Exit', cls=self, fn=self.manage_conv_thread)
 
@@ -352,14 +352,14 @@ if __name__ == "__main__":
             type=str,
             nargs='*',
             default=[],
-            help="",
+            help="キャラクター名。複数指定可。",
         )
 
         parser.add_argument(
             "-v", "--verbose",
             type=bool,
             default=False,
-            help="",
+            help="コンソールに情報を出力",
         )
 
         opt = parser.parse_args()
